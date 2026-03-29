@@ -1,0 +1,51 @@
+name: Daily MLOps Pipeline
+
+on:
+  schedule:
+    # Weekdays at 08:10 UTC
+    - cron: '10 8 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  run-daily-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      SYMBOLS: ${{ vars.SYMBOLS || 'AAPL,GOOGL,MSFT' }}
+      SUPABASE_TABLE: ${{ vars.SUPABASE_TABLE || 'daily_stock_prices' }}
+      MLFLOW_TRACKING_URI: ${{ vars.MLFLOW_TRACKING_URI || 'file:./mlruns' }}
+      MLFLOW_EXPERIMENT_NAME: ${{ vars.MLFLOW_EXPERIMENT_NAME || 'volatility-nn' }}
+      MLFLOW_REGISTER_MODELS: ${{ vars.MLFLOW_REGISTER_MODELS || 'false' }}
+      MLFLOW_MODEL_NAME_PREFIX: ${{ vars.MLFLOW_MODEL_NAME_PREFIX || 'volatility-nn' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run daily pipeline
+        run: |
+          python scripts/run_daily_pipeline.py --symbols "$SYMBOLS" --table "$SUPABASE_TABLE"
+
+      - name: Upload trained artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-models-and-runs
+          path: |
+            backend/data/nn_models/
+            backend/data/saved_volatilities/
+            mlruns/
+          if-no-files-found: warn

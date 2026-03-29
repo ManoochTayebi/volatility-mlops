@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolio Analysis - Neural Platform</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260329a">
+</head>
+<body>
+  <div class="container">
+    <div class="hero-panel d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <span class="pill-badge">Multi-Asset</span>
+        <h2 class="mb-0 mt-2">Portfolio Volatility Analysis</h2>
+      </div>
+      <a href="index.html" class="btn btn-secondary">← Back to Home</a>
+    </div>
+    
+    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+      Build a custom portfolio and analyze its volatility using equal-weight allocation. View both portfolio-level and individual asset predictions.
+    </p>
+
+    <form id="portfolio-form">
+      <div class="row">
+        <div class="col-md-8">
+          <h4 style="color: var(--accent-primary); margin-bottom: 1.5rem;">Select Assets</h4>
+          
+          <div class="form-check mb-3 p-3 soft-panel">
+            <input class="form-check-input" type="checkbox" value="AAPL" id="apple" style="margin-top: 0.3rem;">
+            <label class="form-check-label" for="apple" style="margin-left: 0.5rem;">
+              <strong>Apple Inc. (AAPL)</strong>
+              <small class="d-block" style="color: var(--text-secondary);">Technology • Market Cap: $3.0T</small>
+            </label>
+          </div>
+          
+          <div class="form-check mb-3 p-3 soft-panel">
+            <input class="form-check-input" type="checkbox" value="GOOGL" id="google" style="margin-top: 0.3rem;">
+            <label class="form-check-label" for="google" style="margin-left: 0.5rem;">
+              <strong>Alphabet Inc. (GOOGL)</strong>
+              <small class="d-block" style="color: var(--text-secondary);">Technology • Market Cap: $2.1T</small>
+            </label>
+          </div>
+          
+          <div class="form-check mb-4 p-3 soft-panel">
+            <input class="form-check-input" type="checkbox" value="MSFT" id="microsoft" style="margin-top: 0.3rem;">
+            <label class="form-check-label" for="microsoft" style="margin-left: 0.5rem;">
+              <strong>Microsoft Corporation (MSFT)</strong>
+              <small class="d-block" style="color: var(--text-secondary);">Technology • Market Cap: $3.1T</small>
+            </label>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <h4 style="color: var(--accent-primary); margin-bottom: 1.5rem;">Prediction Settings</h4>
+          
+          <div class="mb-3">
+            <label for="days" class="form-label">Forecast Horizon</label>
+            <input id="days" type="number" value="3" min="1" max="7" class="form-control">
+            <small style="color: var(--text-secondary);">Days to predict (1-7)</small>
+          </div>
+          
+          <div class="p-3 mb-4 soft-panel">
+            <small style="color: var(--text-secondary);">
+              <strong>Portfolio Weighting:</strong> Equal weights (1/n) for selected assets
+            </small>
+          </div>
+          
+          <button type="submit" class="btn btn-primary w-100">
+            Generate Portfolio Analysis
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <div class="mt-4 p-3 soft-panel" style="border-left: 4px solid var(--success-color);">
+      <small style="color: var(--text-secondary);">
+        <strong>Portfolio Analysis Features:</strong> Combined volatility prediction, individual asset breakdowns, historical context, and risk correlation analysis.
+      </small>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("portfolio-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const checked = Array.from(document.querySelectorAll("input[type=checkbox]:checked")).map(el => el.value);
+      const days = document.getElementById("days").value;
+      
+      if (checked.length === 0) {
+        alert("Please select at least one asset for portfolio analysis.");
+        return;
+      }
+      
+      window.location.href = `result_portfolio.html?assets=${checked.join(",")}&days=${days}`;
+    });
+  </script>
+
+</body>
+</html>

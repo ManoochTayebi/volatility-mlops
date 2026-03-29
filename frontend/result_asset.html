@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title id="page-title">Asset Analysis - Neural Platform</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260329a">
+</head>
+<body>
+  <div class="container">
+    <div class="hero-panel d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <span class="pill-badge">Asset Deep-Dive</span>
+        <h2 id="asset-title" class="mb-1"></h2>
+        <p id="asset-subtitle" style="color: var(--text-secondary); margin: 0;"></p>
+      </div>
+      <div>
+        <a href="asset.html" class="btn btn-secondary me-2">← Back</a>
+        <a href="index.html" class="btn btn-secondary">🏠 Home</a>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col-md-8">
+        <div class="p-3 soft-panel">
+          <h5 style="color: var(--accent-primary); margin-bottom: 1rem;">Analysis Settings</h5>
+          <div class="row align-items-end">
+            <div class="col-md-4">
+              <label for="days" class="form-label">Forecast Horizon</label>
+              <input id="days" type="number" value="3" min="1" max="7" class="form-control">
+              <small style="color: var(--text-secondary);">Days to predict (1-7)</small>
+            </div>
+            <div class="col-md-4">
+              <label for="historical-period" class="form-label">Historical Period</label>
+              <select id="historical-period" class="form-control">
+                <option value="7">1 Week</option>
+                <option value="30" selected>1 Month</option>
+                <option value="90">3 Months</option>
+                <option value="180">6 Months</option>
+                <option value="365">1 Year</option>
+              </select>
+              <small style="color: var(--text-secondary);">Historical data range</small>
+            </div>
+            <div class="col-md-4">
+              <button class="btn btn-primary" onclick="loadAsset()">
+                Update Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="p-3 h-100 soft-panel">
+          <h6 style="color: var(--accent-primary); margin-bottom: 0.5rem;">Model Info</h6>
+          <small style="color: var(--text-secondary);">
+            <strong>Neural Forecasting Model:</strong><br>
+            • GRU sequence network<br>
+            • Rolling historical context<br>
+            • Fast inference path
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div id="plot" class="chart-container"></div>
+  </div>
+
+  <script src="app.js?v=20260329a"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const asset = params.get("asset");
+    const initialDays = params.get("days") || "3";
+    const initialHistoricalPeriod = params.get("historical_period") || "30";
+    
+    // Set initial values from URL
+    document.getElementById("days").value = initialDays;
+    document.getElementById("historical-period").value = initialHistoricalPeriod;
+    
+    // Asset information mapping
+    const assetInfo = {
+      'AAPL': { name: 'Apple Inc.', sector: 'Technology • Consumer Electronics', icon: '' },
+      'GOOGL': { name: 'Alphabet Inc.', sector: 'Technology • Internet Services', icon: '' },
+      'MSFT': { name: 'Microsoft Corporation', sector: 'Technology • Software', icon: '' }
+    };
+    
+    const info = assetInfo[asset] || { name: asset, sector: 'Unknown', icon: '' };
+    
+    document.getElementById("asset-title").textContent = `${info.name} (${asset})`;
+    document.getElementById("asset-subtitle").textContent = `${info.sector} • Volatility Analysis`;
+    document.getElementById("page-title").textContent = `${asset} Analysis - Neural Platform`;
+
+    loadAsset();
+  </script>
+</body>
+</html>

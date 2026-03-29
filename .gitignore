@@ -1,0 +1,25 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual envs
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# MLflow local store
+mlruns/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Build artifacts
+*.zip

@@ -1,0 +1,17 @@
+# Serving
+fastapi==0.118.0
+uvicorn==0.37.0
+python-multipart==0.0.20
+
+# Data and ML
+pandas==2.2.3
+numpy==1.26.4
+scipy==1.15.1
+scikit-learn==1.6.1
+torch==2.2.2
+
+# Integrations
+requests==2.32.3
+python-dotenv==1.1.1
+supabase==2.7.4
+mlflow==2.17.2

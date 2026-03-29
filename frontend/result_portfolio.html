@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolio Analysis Results - Neural Platform</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260329a">
+</head>
+<body>
+  <div class="container">
+    <div class="hero-panel d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <span class="pill-badge">Portfolio Deep-Dive</span>
+        <h2 class="mb-1">Portfolio Volatility Analysis</h2>
+        <p id="portfolio-subtitle" style="color: var(--text-secondary); margin: 0;"></p>
+      </div>
+      <div>
+        <a href="portfolio.html" class="btn btn-secondary me-2">← Back</a>
+        <a href="index.html" class="btn btn-secondary">🏠 Home</a>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col-md-8">
+        <div class="p-3 soft-panel">
+          <h5 style="color: var(--accent-primary); margin-bottom: 1rem;">📋 Portfolio Composition</h5>
+          <div id="portfolio-assets" class="d-flex flex-wrap gap-2"></div>
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="p-3 h-100 soft-panel">
+          <h6 style="color: var(--accent-primary); margin-bottom: 0.5rem;">Allocation</h6>
+          <small style="color: var(--text-secondary);">
+            <strong>Equal Weighting:</strong><br>
+            <span id="weight-info"></span><br>
+            <strong>Risk Model:</strong> Zero correlation assumption
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="p-3 soft-panel" style="border: 1px solid var(--accent-primary);">
+          <div class="row align-items-end">
+            <div class="col-md-2">
+              <h6 style="color: var(--accent-primary); margin-bottom: 0.5rem;">Analysis Settings</h6>
+              <label for="days-input" class="form-label">Forecast Horizon</label>
+              <input id="days-input" type="number" min="1" max="7" class="form-control">
+              <small style="color: var(--text-secondary);">Days (1-7)</small>
+            </div>
+            <div class="col-md-3">
+              <label for="historical-period" class="form-label">Historical Period</label>
+              <select id="historical-period" class="form-control">
+                <option value="7">1 Week</option>
+                <option value="30" selected>1 Month</option>
+                <option value="90">3 Months</option>
+                <option value="180">6 Months</option>
+                <option value="365">1 Year</option>
+              </select>
+              <small style="color: var(--text-secondary);">Historical data range</small>
+            </div>
+            <div class="col-md-2">
+              <button class="btn btn-primary" onclick="updateAnalysis()">
+                Update Analysis
+              </button>
+            </div>
+            <div class="col-md-5">
+              <div class="p-2 soft-panel">
+                <small style="color: var(--text-secondary);">
+                  <strong>Neural Forecasting Model:</strong> GRU sequence model with rolling historical context
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="plots"></div>
+  </div>
+
+  <script src="app.js?v=20260329a"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const assets = params.get("assets").split(",");
+    const days = params.get("days");
+    const historicalPeriod = params.get("historical_period") || "30";
+    
+    // Set initial values from URL
+    document.getElementById("days-input").value = days;
+    document.getElementById("historical-period").value = historicalPeriod;
+    
+    // Asset information mapping
+    const assetInfo = {
+      'AAPL': { name: 'Apple Inc.', icon: '' },
+      'GOOGL': { name: 'Alphabet Inc.', icon: '' },
+      'MSFT': { name: 'Microsoft Corporation', icon: '' }
+    };
+    
+    // Update portfolio information
+    document.getElementById("portfolio-subtitle").textContent = 
+      `${assets.length} Assets • ${days}-Day Forecast • Equal Weight Allocation`;
+    
+    // Display portfolio assets
+    const assetsContainer = document.getElementById("portfolio-assets");
+    assets.forEach(asset => {
+      const info = assetInfo[asset] || { name: asset, icon: '' };
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.style.cssText = `
+        background: var(--accent-primary); 
+        color: white; 
+        padding: 0.5rem 1rem; 
+        border-radius: 20px; 
+        font-size: 0.9rem;
+      `;
+      badge.textContent = `${asset}`;
+      assetsContainer.appendChild(badge);
+    });
+    
+    // Display weight information
+    const weight = (100 / assets.length).toFixed(1);
+    document.getElementById("weight-info").textContent = `${weight}% per asset (${assets.length} total)`;
+
+    // Function to update analysis with new parameters
+    window.updateAnalysis = function() {
+      const newDays = document.getElementById("days-input").value;
+      const newHistoricalPeriod = document.getElementById("historical-period").value;
+      
+      if (newDays < 1 || newDays > 7 || isNaN(newDays)) {
+        alert("Please enter a valid number of days (1-7).");
+        return;
+      }
+      
+      // Update URL and reload data
+      const newUrl = `result_portfolio.html?assets=${assets.join(",")}&days=${newDays}&historical_period=${newHistoricalPeriod}`;
+      window.location.href = newUrl;
+    };
+
+    loadPortfolioWithHistory(assets, days, historicalPeriod);
+  </script>
+</body>
+</html>
