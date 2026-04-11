@@ -9,6 +9,7 @@ jobs:
     timeout-minutes: 60
 
     env:
+      PYTHONPATH: .
       TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
