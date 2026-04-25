@@ -115,6 +115,25 @@ docker compose up --build
 - App/UI/API: `http://localhost:8000`
 - MLflow UI: `http://localhost:5001`
 
+### Auto-Published App Image
+
+The daily GitHub Actions pipeline now builds and publishes an app image to GitHub Container Registry after retraining completes successfully. The image includes the refreshed `backend/data` artifacts produced during that run.
+
+- Image: `ghcr.io/<owner>/<repo>-app:latest`
+- Immutable tag: `ghcr.io/<owner>/<repo>-app:<git-sha>`
+
+To run the published image on a Docker host:
+
+```bash
+docker compose -f docker-compose.deploy.yml up -d
+```
+
+Set `APP_IMAGE` if you want to pin a specific tag:
+
+```bash
+APP_IMAGE=ghcr.io/<owner>/<repo>-app:<git-sha> docker compose -f docker-compose.deploy.yml up -d
+```
+
 ## Security and Secrets
 
 - `.env` and `.env.*` are ignored by Git.
