@@ -17,6 +17,8 @@ from typing import Tuple, Optional
 import logging
 from dataclasses import dataclass
 
+from src.supabase_connect import SupabaseOperations
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -104,11 +106,13 @@ class DatasetProcessor:
         self, 
         asset: str, 
         data_folder: str = "backend/data",
+        source: str = "supabase",
+        table_name: str = "daily_stock_prices",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None
     ) -> pd.DataFrame:
         """
-        Load market data from CSV file.
+        Load market data from Supabase or CSV.
         
         Parameters
         ----------
@@ -116,6 +120,10 @@ class DatasetProcessor:
             Asset symbol (e.g., 'AAPL', 'GOOGL', 'MSFT')
         data_folder : str
             Path to data folder
+        source : str
+            Data source: "supabase" (default) or "csv"
+        table_name : str
+            Supabase table name when source="supabase"
         start_date : str, optional
             Start date for data filtering (format: 'YYYY-MM-DD')
         end_date : str, optional
@@ -126,14 +134,13 @@ class DatasetProcessor:
         pd.DataFrame
             Market data with datetime index
         """
-        file_path = os.path.join(data_folder, f"market_{asset.lower()}.csv")
-        
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Market data not found: {file_path}")
-        
-        df = pd.read_csv(file_path, parse_dates=["Date"])
-        df = df.set_index("Date").sort_index()
-        
+        if source == "supabase":
+            df = self._load_market_data_from_supabase(asset=asset, table_name=table_name)
+        elif source == "csv":
+            df = self._load_market_data_from_csv(asset=asset, data_folder=data_folder)
+        else:
+            raise ValueError(f"Unsupported market data source: {source}")
+
         # Filter by date range if specified
         if start_date is not None:
             start_date = pd.to_datetime(start_date)
@@ -141,11 +148,55 @@ class DatasetProcessor:
         if end_date is not None:
             end_date = pd.to_datetime(end_date)
             df = df[df.index <= end_date]
-        
-        logger.info(f"Loaded {len(df)} rows for {asset}" + 
-                   (f" (from {start_date})" if start_date else "") + 
-                   (f" (to {end_date})" if end_date else ""))
+
+        logger.info(
+            f"Loaded {len(df)} rows for {asset} from {source}"
+            + (f" (from {start_date})" if start_date else "")
+            + (f" (to {end_date})" if end_date else "")
+        )
         return df
+
+    def _load_market_data_from_csv(
+        self,
+        asset: str,
+        data_folder: str,
+    ) -> pd.DataFrame:
+        file_path = os.path.join(data_folder, f"market_{asset.lower()}.csv")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Market data not found: {file_path}")
+
+        df = pd.read_csv(file_path, parse_dates=["Date"])
+        return df.set_index("Date").sort_index()
+
+    def _load_market_data_from_supabase(
+        self,
+        asset: str,
+        table_name: str,
+    ) -> pd.DataFrame:
+        supabase = SupabaseOperations()
+        rows = supabase.fetch_symbol_rows(table_name=table_name, symbol=asset)
+        if not rows:
+            raise FileNotFoundError(
+                f"No Supabase market data found for {asset} in table {table_name}"
+            )
+
+        frame = pd.DataFrame(rows)
+        frame["datetime"] = pd.to_datetime(frame["datetime"])
+        for col in ["open", "high", "low", "close", "volume"]:
+            frame[col] = pd.to_numeric(frame[col], errors="coerce")
+
+        renamed = frame.rename(
+            columns={
+                "datetime": "Date",
+                "open": "Open",
+                "high": "High",
+                "low": "Low",
+                "close": "Close",
+                "volume": "Volume",
+            }
+        )
+        renamed = renamed[["Date", "Open", "High", "Low", "Close", "Volume"]]
+        return renamed.set_index("Date").sort_index()
     
     def prepare_sequences(
         self, 

@@ -17,10 +17,10 @@ Production-style MLOps pipeline for market volatility forecasting with a neural 
    Twelve Data OHLCV is ingested into Supabase.
 
 2. **Data Sync Layer**  
-   Supabase records are synced to local training datasets.
+   Optional CSV export from Supabase is available for debugging or local snapshots.
 
 3. **Training Layer**  
-   Realized volatility is computed and GRU models are retrained.
+   Realized volatility is computed from Supabase-backed market data and GRU models are retrained.
 
 4. **Experiment Layer**  
    Parameters, metrics, and artifacts are logged in MLflow.
@@ -92,6 +92,17 @@ make preflight
 make ingest-daily
 make sync
 make retrain
+```
+
+Training defaults to reading market data directly from Supabase:
+
+- `MARKET_DATA_SOURCE=supabase`
+- `SYNC_MARKET_CSV=false`
+
+If you want local CSV snapshots as well, set:
+
+```bash
+SYNC_MARKET_CSV=true
 ```
 
 ## Run the Platform

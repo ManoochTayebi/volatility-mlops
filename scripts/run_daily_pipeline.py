@@ -14,6 +14,7 @@ def main() -> None:
     parser.add_argument("--symbols", default=os.getenv("SYMBOLS", "AAPL,GOOGL,MSFT"))
     parser.add_argument("--table", default=os.getenv("SUPABASE_TABLE", "daily_stock_prices"))
     args = parser.parse_args()
+    sync_market_csv = os.getenv("SYNC_MARKET_CSV", "false").lower() == "true"
 
     run_step([
         "python",
@@ -35,14 +36,17 @@ def main() -> None:
         args.table,
     ])
 
-    run_step([
-        "python",
-        "scripts/sync_market_data_from_supabase.py",
-        "--symbols",
-        args.symbols,
-        "--table",
-        args.table,
-    ])
+    if sync_market_csv:
+        run_step([
+            "python",
+            "scripts/sync_market_data_from_supabase.py",
+            "--symbols",
+            args.symbols,
+            "--table",
+            args.table,
+        ])
+    else:
+        print("Skipping market CSV sync because SYNC_MARKET_CSV is false")
 
     run_step([
         "python",

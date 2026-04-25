@@ -52,7 +52,12 @@ def compute_and_save_volatility(asset: str, config: "TrainingConfig") -> pd.Seri
         )
     )
 
-    market_data = data_processor.load_market_data(asset=asset, data_folder=config.data_folder)
+    market_data = data_processor.load_market_data(
+        asset=asset,
+        data_folder=config.data_folder,
+        source=os.getenv("MARKET_DATA_SOURCE", "supabase"),
+        table_name=os.getenv("SUPABASE_TABLE", "daily_stock_prices"),
+    )
     volatility = data_processor.compute_realized_volatility(prices=market_data["Close"], window=config.rolling_window)
     data_processor.save_volatility(volatility=volatility, asset=asset, save_folder=config.volatility_save_folder)
     return volatility
@@ -111,6 +116,7 @@ def run(symbols: List[str]) -> None:
 
     with mlflow.start_run(run_name="scheduled-retraining"):
         mlflow.set_tag("pipeline", "supabase-gha-mlflow")
+        mlflow.set_tag("market_data_source", os.getenv("MARKET_DATA_SOURCE", "supabase"))
 
         for symbol in symbols:
             config = create_training_config(symbol)

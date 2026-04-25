@@ -22,6 +22,8 @@ jobs:
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
       SYMBOLS: ${{ vars.SYMBOLS || 'AAPL,GOOGL,MSFT' }}
       SUPABASE_TABLE: ${{ vars.SUPABASE_TABLE || 'daily_stock_prices' }}
+      MARKET_DATA_SOURCE: ${{ vars.MARKET_DATA_SOURCE || 'supabase' }}
+      SYNC_MARKET_CSV: ${{ vars.SYNC_MARKET_CSV || 'false' }}
       MLFLOW_TRACKING_URI: ${{ vars.MLFLOW_TRACKING_URI || 'file:./mlruns' }}
       MLFLOW_EXPERIMENT_NAME: ${{ vars.MLFLOW_EXPERIMENT_NAME || 'volatility-nn' }}
       MLFLOW_REGISTER_MODELS: ${{ vars.MLFLOW_REGISTER_MODELS || 'false' }}
