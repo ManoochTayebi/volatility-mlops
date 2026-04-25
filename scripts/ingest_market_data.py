@@ -40,6 +40,8 @@ def run(mode: str, symbols: List[str], table_name: str, start_date: str, end_dat
     for symbol in symbols:
         latest_dt = supabase.get_latest_datetime(table_name=table_name, symbol=symbol)
         symbol_start = build_start_date(mode=mode, latest_datetime=latest_dt, default_start_date=start_date)
+        print(f"[{symbol}] latest before ingest: {latest_dt or 'NONE'}")
+        print(f"[{symbol}] fetching window: {symbol_start} -> {end_date}")
 
         df = client.fetch_daily_series(
             symbol=symbol,
@@ -57,7 +59,11 @@ def run(mode: str, symbols: List[str], table_name: str, start_date: str, end_dat
             table_name=table_name,
             rows=df.to_dict(orient="records"),
         )
-        print(f"[{symbol}] upserted {inserted} rows (from {symbol_start} to {end_date})")
+        latest_after = supabase.get_latest_datetime(table_name=table_name, symbol=symbol)
+        print(
+            f"[{symbol}] processed {inserted} rows "
+            f"(window {symbol_start} -> {end_date}); latest after ingest: {latest_after or 'NONE'}"
+        )
         client.respecting_rate_limit_sleep()
 
 

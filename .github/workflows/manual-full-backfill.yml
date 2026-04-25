@@ -30,6 +30,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Report Supabase status before backfill
+        run: |
+          python scripts/report_supabase_status.py --symbols "$SYMBOLS" --table "$SUPABASE_TABLE"
+
       - name: Preflight checks
         run: |
           python scripts/preflight_check.py --symbols "$SYMBOLS" --table "$SUPABASE_TABLE"
@@ -41,3 +45,7 @@ jobs:
       - name: Sync Supabase to local market CSVs
         run: |
           python scripts/sync_market_data_from_supabase.py --symbols "$SYMBOLS" --table "$SUPABASE_TABLE"
+
+      - name: Report Supabase status after backfill
+        run: |
+          python scripts/report_supabase_status.py --symbols "$SYMBOLS" --table "$SUPABASE_TABLE"

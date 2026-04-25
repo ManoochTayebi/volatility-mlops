@@ -37,9 +37,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Report Supabase status before pipeline
+        run: |
+          python scripts/report_supabase_status.py --symbols "$SYMBOLS" --table "$SUPABASE_TABLE"
+
       - name: Run daily pipeline
         run: |
           python scripts/run_daily_pipeline.py --symbols "$SYMBOLS" --table "$SUPABASE_TABLE"
+
+      - name: Report Supabase status after pipeline
+        run: |
+          python scripts/report_supabase_status.py --symbols "$SYMBOLS" --table "$SUPABASE_TABLE"
 
       - name: Upload trained artifacts
         uses: actions/upload-artifact@v4
