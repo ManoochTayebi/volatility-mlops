@@ -19,8 +19,15 @@ from backend.predictor import VolatilityPredictor
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize the global predictor instance
-predictor = VolatilityPredictor()
+_predictor = None
+
+
+def get_predictor() -> VolatilityPredictor:
+    """Create the predictor only when a prediction endpoint needs it."""
+    global _predictor
+    if _predictor is None:
+        _predictor = VolatilityPredictor()
+    return _predictor
 
 
 def compute_asset_volatility(asset: str, days: int = 5, historical_period: int = 30) -> Dict:
@@ -42,6 +49,7 @@ def compute_asset_volatility(asset: str, days: int = 5, historical_period: int =
         Contains historical and predicted volatility data with dates
     """
     try:
+        predictor = get_predictor()
         # Get predictions using trained model
         predictions, predicted_dates = predictor.predict_multi_step(asset, days)
         
@@ -87,6 +95,7 @@ def compute_portfolio_volatility(assets: List[str], days: int = 5, historical_pe
         Contains portfolio and individual asset volatility predictions
     """
     try:
+        predictor = get_predictor()
         # Get individual asset predictions and historical data
         asset_predictions = {}
         asset_historical_data = {}
