@@ -24,9 +24,11 @@ class AzureSqlOperations:
         import pymssql
 
         server = self.server.replace("tcp:", "").split(",")[0]
+        server_short_name = server.split(".")[0]
+        username = self.username if "@" in self.username else f"{self.username}@{server_short_name}"
         return pymssql.connect(
             server=server,
-            user=self.username,
+            user=username,
             password=self.password,
             database=self.database,
             login_timeout=30,
