@@ -17,6 +17,8 @@ jobs:
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
       AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
       AZURE_COMPUTE_NAME: ${{ vars.AZURE_COMPUTE_NAME || 'volatility-cpu-lowcost' }}
+      AZURE_COMPUTE_SIZE: ${{ vars.AZURE_COMPUTE_SIZE || 'Standard_DS2_v2' }}
+      AZURE_COMPUTE_TIER: ${{ vars.AZURE_COMPUTE_TIER || 'dedicated' }}
       SYMBOLS: ${{ vars.SYMBOLS || 'AAPL,GOOGL,MSFT' }}
       AZURE_SQL_TABLE: ${{ vars.AZURE_SQL_TABLE || 'dbo.daily_stock_prices' }}
       AZURE_MODEL_ARTIFACTS_CONTAINER: ${{ vars.AZURE_MODEL_ARTIFACTS_CONTAINER || 'volatility-model-artifacts' }}
@@ -44,11 +46,11 @@ jobs:
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --workspace-name "$AZURE_ML_WORKSPACE" \
             --type amlcompute \
-            --size "${{ vars.AZURE_COMPUTE_SIZE || 'Standard_DS2_v2' }}" \
+            --size "$AZURE_COMPUTE_SIZE" \
             --min-instances 0 \
             --max-instances 1 \
             --idle-time-before-scale-down 120 \
-            --tier low_priority || true
+            --tier "$AZURE_COMPUTE_TIER" || true
 
       - name: Submit and stream Azure ML job
         env:

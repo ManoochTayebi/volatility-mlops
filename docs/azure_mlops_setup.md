@@ -33,6 +33,7 @@ export AZURE_SQL_SERVER_NAME=<globally-unique-sql-server-name>
 export AZURE_SQL_DATABASE=volatilitydb
 export AZURE_SQL_ADMIN_USER=voladmin
 export AZURE_SQL_ADMIN_PASSWORD='<strong-password>'
+export AZURE_COMPUTE_TIER=dedicated
 
 bash azure/setup_low_cost_resources.sh
 ```
@@ -44,7 +45,7 @@ The script creates:
 - Azure SQL server and Basic database
 - Azure Container Registry Basic
 - Azure ML workspace
-- Azure ML low-priority CPU compute with min instances `0`
+- Azure ML CPU compute with min instances `0`
 - Azure Container Apps environment
 
 Keep the printed values for GitHub secrets.
@@ -96,6 +97,7 @@ Add:
 - `AZURE_ML_WORKSPACE=mlw-volatility-mlops-dev`
 - `AZURE_COMPUTE_NAME=volatility-cpu-lowcost`
 - `AZURE_COMPUTE_SIZE=Standard_DS2_v2`
+- `AZURE_COMPUTE_TIER=dedicated`
 - `AZURE_ACR_NAME=<your-acr-name>`
 - `AZURE_CONTAINER_APP_ENV=cae-volatility-mlops-dev`
 - `AZURE_CONTAINER_APP=volatility-mlops-app`
@@ -128,6 +130,6 @@ az containerapp show \
 - Set an Azure budget alert at 25, 50, and 100 USD.
 - Keep Azure ML compute min instances at `0`.
 - Keep Container Apps min replicas at `0`.
-- Use low-priority CPU compute for daily jobs.
+- Use `dedicated` compute if your subscription has dedicated quota. Switch `AZURE_COMPUTE_TIER` to `low_priority` only after low-priority quota is available.
 - Avoid AKS and Azure ML managed online endpoints for this project.
 - Delete unused old images and artifact blobs if storage grows.

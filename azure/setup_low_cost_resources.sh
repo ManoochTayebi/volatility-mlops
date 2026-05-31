@@ -11,6 +11,7 @@ set -euo pipefail
 : "${AZURE_MODEL_ARTIFACTS_CONTAINER:=volatility-model-artifacts}"
 : "${AZURE_COMPUTE_NAME:=volatility-cpu-lowcost}"
 : "${AZURE_COMPUTE_SIZE:=Standard_DS2_v2}"
+: "${AZURE_COMPUTE_TIER:=dedicated}"
 : "${AZURE_SQL_SERVER_NAME:?Set AZURE_SQL_SERVER_NAME to a globally unique SQL server name}"
 : "${AZURE_SQL_DATABASE:=volatilitydb}"
 : "${AZURE_SQL_ADMIN_USER:=voladmin}"
@@ -117,7 +118,7 @@ az ml compute create \
   --min-instances 0 \
   --max-instances 1 \
   --idle-time-before-scale-down 120 \
-  --tier low_priority
+  --tier "$AZURE_COMPUTE_TIER"
 
 az containerapp env create \
   --name "$AZURE_CONTAINER_APP_ENV" \
