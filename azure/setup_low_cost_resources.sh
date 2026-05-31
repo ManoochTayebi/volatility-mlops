@@ -16,6 +16,25 @@ set -euo pipefail
 : "${AZURE_SQL_ADMIN_USER:=voladmin}"
 : "${AZURE_SQL_ADMIN_PASSWORD:?Set AZURE_SQL_ADMIN_PASSWORD to a strong password}"
 
+wait_for_provider() {
+  local namespace="$1"
+  local state=""
+  local attempts=0
+
+  while [ "$attempts" -lt 60 ]; do
+    state="$(az provider show --namespace "$namespace" --query registrationState -o tsv 2>/dev/null || true)"
+    echo "$namespace registration state: ${state:-unknown}"
+    if [ "$state" = "Registered" ]; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 10
+  done
+
+  echo "Timed out waiting for $namespace to register" >&2
+  return 1
+}
+
 az group create \
   --name "$AZURE_RESOURCE_GROUP" \
   --location "$AZURE_LOCATION"
@@ -25,9 +44,9 @@ az provider register --namespace Microsoft.OperationalInsights
 az provider register --namespace Microsoft.MachineLearningServices
 
 echo "Waiting for required Azure resource providers to finish registration..."
-az provider wait --namespace Microsoft.App --registered
-az provider wait --namespace Microsoft.OperationalInsights --registered
-az provider wait --namespace Microsoft.MachineLearningServices --registered
+wait_for_provider Microsoft.App
+wait_for_provider Microsoft.OperationalInsights
+wait_for_provider Microsoft.MachineLearningServices
 
 az storage account create \
   --name "$AZURE_STORAGE_ACCOUNT" \
