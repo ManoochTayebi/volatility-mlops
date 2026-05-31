@@ -126,8 +126,10 @@ az containerapp env create \
   --location "$AZURE_LOCATION"
 
 echo "Azure resources created."
-echo "Add the printed/storage secrets to GitHub Actions before running the workflows."
-echo "AZURE_STORAGE_CONNECTION_STRING=$AZURE_STORAGE_CONNECTION_STRING"
+echo "Add the Azure values to GitHub Actions before running the workflows."
+echo "AZURE_STORAGE_CONNECTION_STRING is hidden. Retrieve it only when adding the GitHub secret:"
+echo "az storage account show-connection-string --name $AZURE_STORAGE_ACCOUNT --resource-group $AZURE_RESOURCE_GROUP --query connectionString -o tsv"
 echo "AZURE_SQL_SERVER=${AZURE_SQL_SERVER_NAME}.database.windows.net"
 echo "AZURE_SQL_DATABASE=$AZURE_SQL_DATABASE"
 echo "AZURE_SQL_USERNAME=$AZURE_SQL_ADMIN_USER"
+echo "AZURE_SQL_PASSWORD is the password you exported as AZURE_SQL_ADMIN_PASSWORD."

@@ -48,7 +48,17 @@ The script creates:
 - Azure ML CPU compute with min instances `0`
 - Azure Container Apps environment
 
-Keep the printed values for GitHub secrets.
+Keep the printed Azure SQL values for GitHub secrets. The storage connection string is intentionally hidden in the setup output; retrieve it only when adding the GitHub secret:
+
+```bash
+az storage account show-connection-string \
+  --name "$AZURE_STORAGE_ACCOUNT" \
+  --resource-group "$AZURE_RESOURCE_GROUP" \
+  --query connectionString \
+  -o tsv
+```
+
+If a storage connection string is pasted into chat, logs, or any public place, rotate the storage key before using it.
 
 ## 2. Create GitHub Azure Credentials
 
@@ -77,7 +87,7 @@ In GitHub:
 Add:
 
 - `AZURE_CREDENTIALS`
-- `AZURE_STORAGE_CONNECTION_STRING`
+- `AZURE_STORAGE_CONNECTION_STRING` from `az storage account show-connection-string`
 - `AZURE_SQL_SERVER`
 - `AZURE_SQL_DATABASE`
 - `AZURE_SQL_USERNAME`
