@@ -83,8 +83,6 @@ jobs:
             --image "$IMAGE" \
             --target-port 8000 \
             --ingress external \
-            --min-replicas 0 \
-            --max-replicas 1 \
             --registry-server "$ACR_LOGIN_SERVER" \
             --registry-username "$ACR_USERNAME" \
             --registry-password "$ACR_PASSWORD" \
@@ -98,6 +96,12 @@ jobs:
               RNN_NUM_LAYERS="$RNN_NUM_LAYERS" \
               FC_HIDDEN_SIZE="$FC_HIDDEN_SIZE" \
               DROPOUT="$DROPOUT"
+
+          az containerapp update \
+            --name "$AZURE_CONTAINER_APP" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --min-replicas 0 \
+            --max-replicas 1
 
       - name: Set Container App secrets
         env:
