@@ -24,6 +24,11 @@ az provider register --namespace Microsoft.App
 az provider register --namespace Microsoft.OperationalInsights
 az provider register --namespace Microsoft.MachineLearningServices
 
+echo "Waiting for required Azure resource providers to finish registration..."
+az provider wait --namespace Microsoft.App --registered
+az provider wait --namespace Microsoft.OperationalInsights --registered
+az provider wait --namespace Microsoft.MachineLearningServices --registered
+
 az storage account create \
   --name "$AZURE_STORAGE_ACCOUNT" \
   --resource-group "$AZURE_RESOURCE_GROUP" \
