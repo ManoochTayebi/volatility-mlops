@@ -35,18 +35,27 @@ wait_for_provider() {
   return 1
 }
 
+echo "Active Azure account:"
+az account show --query "{name:name, id:id, state:state, tenantId:tenantId}" -o table
+
 az group create \
   --name "$AZURE_RESOURCE_GROUP" \
   --location "$AZURE_LOCATION"
 
 az provider register --namespace Microsoft.App
+az provider register --namespace Microsoft.ContainerRegistry
 az provider register --namespace Microsoft.OperationalInsights
 az provider register --namespace Microsoft.MachineLearningServices
+az provider register --namespace Microsoft.Sql
+az provider register --namespace Microsoft.Storage
 
 echo "Waiting for required Azure resource providers to finish registration..."
 wait_for_provider Microsoft.App
+wait_for_provider Microsoft.ContainerRegistry
 wait_for_provider Microsoft.OperationalInsights
 wait_for_provider Microsoft.MachineLearningServices
+wait_for_provider Microsoft.Sql
+wait_for_provider Microsoft.Storage
 
 az storage account create \
   --name "$AZURE_STORAGE_ACCOUNT" \
