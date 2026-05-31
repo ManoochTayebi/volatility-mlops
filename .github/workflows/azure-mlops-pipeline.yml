@@ -1,0 +1,94 @@
+name: Azure MLOps Pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekdays after US market close buffer.
+    - cron: "30 2 * * 2-6"
+
+permissions:
+  contents: read
+
+jobs:
+  azure-mlops:
+    runs-on: ubuntu-latest
+
+    env:
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
+      AZURE_COMPUTE_NAME: ${{ vars.AZURE_COMPUTE_NAME || 'volatility-cpu-lowcost' }}
+      SYMBOLS: ${{ vars.SYMBOLS || 'AAPL,GOOGL,MSFT' }}
+      AZURE_SQL_TABLE: ${{ vars.AZURE_SQL_TABLE || 'dbo.daily_stock_prices' }}
+      AZURE_MODEL_ARTIFACTS_CONTAINER: ${{ vars.AZURE_MODEL_ARTIFACTS_CONTAINER || 'volatility-model-artifacts' }}
+      AZURE_MODEL_ARTIFACTS_PREFIX: ${{ vars.AZURE_MODEL_ARTIFACTS_PREFIX || 'latest' }}
+      AZURE_CONTAINER_APP: ${{ vars.AZURE_CONTAINER_APP || 'volatility-mlops-app' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install Azure CLI extensions
+        run: |
+          az extension add --name ml --upgrade
+          az extension add --name containerapp --upgrade
+
+      - name: Ensure low-cost Azure ML compute exists
+        run: |
+          az ml compute create \
+            --name "$AZURE_COMPUTE_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --workspace-name "$AZURE_ML_WORKSPACE" \
+            --type amlcompute \
+            --size "${{ vars.AZURE_COMPUTE_SIZE || 'Standard_DS2_v2' }}" \
+            --min-instances 0 \
+            --max-instances 1 \
+            --idle-time-before-scale-down 120 \
+            --tier low_priority || true
+
+      - name: Submit and stream Azure ML job
+        env:
+          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+          AZURE_SQL_SERVER: ${{ secrets.AZURE_SQL_SERVER }}
+          AZURE_SQL_DATABASE: ${{ secrets.AZURE_SQL_DATABASE }}
+          AZURE_SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
+          AZURE_SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+        run: |
+          JOB_NAME=$(az ml job create \
+            --file azure/ml/daily_pipeline_job.yml \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --workspace-name "$AZURE_ML_WORKSPACE" \
+            --set compute="azureml:$AZURE_COMPUTE_NAME" \
+            --set inputs.symbols="$SYMBOLS" \
+            --set inputs.azure_sql_table="$AZURE_SQL_TABLE" \
+            --set environment_variables.TWELVE_DATA_API_KEY="$TWELVE_DATA_API_KEY" \
+            --set environment_variables.AZURE_SQL_SERVER="$AZURE_SQL_SERVER" \
+            --set environment_variables.AZURE_SQL_DATABASE="$AZURE_SQL_DATABASE" \
+            --set environment_variables.AZURE_SQL_USERNAME="$AZURE_SQL_USERNAME" \
+            --set environment_variables.AZURE_SQL_PASSWORD="$AZURE_SQL_PASSWORD" \
+            --set environment_variables.AZURE_SQL_TABLE="$AZURE_SQL_TABLE" \
+            --set environment_variables.AZURE_STORAGE_CONNECTION_STRING="$AZURE_STORAGE_CONNECTION_STRING" \
+            --set environment_variables.AZURE_MODEL_ARTIFACTS_CONTAINER="$AZURE_MODEL_ARTIFACTS_CONTAINER" \
+            --set environment_variables.AZURE_MODEL_ARTIFACTS_PREFIX="$AZURE_MODEL_ARTIFACTS_PREFIX" \
+            --query name \
+            -o tsv)
+          az ml job stream \
+            --name "$JOB_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --workspace-name "$AZURE_ML_WORKSPACE"
+
+          if az containerapp show \
+            --name "$AZURE_CONTAINER_APP" \
+            --resource-group "$AZURE_RESOURCE_GROUP" >/dev/null 2>&1; then
+            az containerapp update \
+              --name "$AZURE_CONTAINER_APP" \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --set-env-vars MODEL_ARTIFACT_REFRESH="$JOB_NAME"
+          else
+            echo "Container App $AZURE_CONTAINER_APP not found; skipping serving refresh."
+          fi

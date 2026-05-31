@@ -116,4 +116,4 @@ TwelveData was selected as the primary data source for this project due to:
 4. **International Coverage:** Wide geographic coverage without restrictions
 5. **Date Range Flexibility:** Easy specification of start and end dates for historical queries
 
-This repository currently uses Twelve Data through `src/twelve_data_client.py`, which is wired into the Supabase ingestion scripts under `scripts/`.
+This repository currently uses Twelve Data through `src/twelve_data_client.py`, which is wired into the Azure SQL ingestion scripts under `scripts/`.

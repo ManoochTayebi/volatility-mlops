@@ -11,7 +11,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from src.supabase_connect import SupabaseOperations
+from src.azure_sql_connect import AzureSqlOperations
 from src.twelve_data_client import DEFAULT_END_DATE, DEFAULT_START_DATE, TwelveDataClient
 
 
@@ -32,13 +32,14 @@ def run(mode: str, symbols: List[str], table_name: str, start_date: str, end_dat
     load_dotenv()
     twelve_key = os.getenv("TWELVE_DATA_API_KEY")
 
-    supabase = SupabaseOperations()
+    azure_sql = AzureSqlOperations()
+    azure_sql.ensure_market_table(table_name=table_name)
     client = TwelveDataClient(api_key=twelve_key)
 
     print(f"Starting ingestion in {mode} mode for {len(symbols)} symbols into {table_name}")
 
     for symbol in symbols:
-        latest_dt = supabase.get_latest_datetime(table_name=table_name, symbol=symbol)
+        latest_dt = azure_sql.get_latest_datetime(table_name=table_name, symbol=symbol)
         symbol_start = build_start_date(mode=mode, latest_datetime=latest_dt, default_start_date=start_date)
         print(f"[{symbol}] latest before ingest: {latest_dt or 'NONE'}")
         print(f"[{symbol}] fetching window: {symbol_start} -> {end_date}")
@@ -55,11 +56,11 @@ def run(mode: str, symbols: List[str], table_name: str, start_date: str, end_dat
             client.respecting_rate_limit_sleep()
             continue
 
-        inserted = supabase.upsert_rows(
+        inserted = azure_sql.upsert_rows(
             table_name=table_name,
             rows=df.to_dict(orient="records"),
         )
-        latest_after = supabase.get_latest_datetime(table_name=table_name, symbol=symbol)
+        latest_after = azure_sql.get_latest_datetime(table_name=table_name, symbol=symbol)
         print(
             f"[{symbol}] processed {inserted} rows "
             f"(window {symbol_start} -> {end_date}); latest after ingest: {latest_after or 'NONE'}"
@@ -70,10 +71,10 @@ def run(mode: str, symbols: List[str], table_name: str, start_date: str, end_dat
 def main() -> None:
     load_dotenv()
 
-    parser = argparse.ArgumentParser(description="Ingest market prices from Twelve Data into Supabase")
+    parser = argparse.ArgumentParser(description="Ingest market prices from Twelve Data into Azure SQL")
     parser.add_argument("--mode", choices=["daily", "full"], default=os.getenv("INGEST_MODE", "daily"))
     parser.add_argument("--symbols", default=os.getenv("SYMBOLS", "AAPL,GOOGL,MSFT"))
-    parser.add_argument("--table", default=os.getenv("SUPABASE_TABLE", "daily_stock_prices"))
+    parser.add_argument("--table", default=os.getenv("AZURE_SQL_TABLE", "dbo.daily_stock_prices"))
     parser.add_argument("--start-date", default=os.getenv("START_DATE", DEFAULT_START_DATE))
     parser.add_argument("--end-date", default=os.getenv("END_DATE", DEFAULT_END_DATE))
 

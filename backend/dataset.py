@@ -17,7 +17,7 @@ from typing import Tuple, Optional
 import logging
 from dataclasses import dataclass
 
-from src.supabase_connect import SupabaseOperations
+from src.azure_sql_connect import AzureSqlOperations
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -106,13 +106,13 @@ class DatasetProcessor:
         self, 
         asset: str, 
         data_folder: str = "backend/data",
-        source: str = "supabase",
-        table_name: str = "daily_stock_prices",
+        source: str = "azure_sql",
+        table_name: str = "dbo.daily_stock_prices",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None
     ) -> pd.DataFrame:
         """
-        Load market data from Supabase or CSV.
+        Load market data from Azure SQL or CSV.
         
         Parameters
         ----------
@@ -121,9 +121,9 @@ class DatasetProcessor:
         data_folder : str
             Path to data folder
         source : str
-            Data source: "supabase" (default) or "csv"
+            Data source: "azure_sql" (default) or "csv"
         table_name : str
-            Supabase table name when source="supabase"
+            Azure SQL table name when source="azure_sql"
         start_date : str, optional
             Start date for data filtering (format: 'YYYY-MM-DD')
         end_date : str, optional
@@ -134,8 +134,8 @@ class DatasetProcessor:
         pd.DataFrame
             Market data with datetime index
         """
-        if source == "supabase":
-            df = self._load_market_data_from_supabase(asset=asset, table_name=table_name)
+        if source == "azure_sql":
+            df = self._load_market_data_from_azure_sql(asset=asset, table_name=table_name)
         elif source == "csv":
             df = self._load_market_data_from_csv(asset=asset, data_folder=data_folder)
         else:
@@ -168,16 +168,16 @@ class DatasetProcessor:
         df = pd.read_csv(file_path, parse_dates=["Date"])
         return df.set_index("Date").sort_index()
 
-    def _load_market_data_from_supabase(
+    def _load_market_data_from_azure_sql(
         self,
         asset: str,
         table_name: str,
     ) -> pd.DataFrame:
-        supabase = SupabaseOperations()
-        rows = supabase.fetch_symbol_rows(table_name=table_name, symbol=asset)
+        azure_sql = AzureSqlOperations()
+        rows = azure_sql.fetch_symbol_rows(table_name=table_name, symbol=asset)
         if not rows:
             raise FileNotFoundError(
-                f"No Supabase market data found for {asset} in table {table_name}"
+                f"No Azure SQL market data found for {asset} in table {table_name}"
             )
 
         frame = pd.DataFrame(rows)

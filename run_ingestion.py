@@ -14,7 +14,7 @@ if __name__ == "__main__":
     load_dotenv()
 
     symbols = parse_symbols(os.getenv("SYMBOLS", "AAPL,GOOGL,MSFT"))
-    table = os.getenv("SUPABASE_TABLE", "daily_stock_prices")
+    table = os.getenv("AZURE_SQL_TABLE", "dbo.daily_stock_prices")
     start_date = os.getenv("START_DATE", "2015-01-01")
     end_date = os.getenv("END_DATE", DEFAULT_END_DATE)
 

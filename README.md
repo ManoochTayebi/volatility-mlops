@@ -7,44 +7,41 @@ Production-style MLOps pipeline for market volatility forecasting with a neural 
 - End-to-end pipeline from market data ingestion to model-serving.
 - Neural forecasting backend (GRU) optimized for fast retraining/inference.
 - Experiment tracking and optional model registration via MLflow.
-- Scheduled orchestration with GitHub Actions.
-- Dockerized FastAPI + web UI deployment.
-- Free-friendly stack: Supabase, GitHub Actions, MLflow local/file store.
+- Scheduled orchestration with GitHub Actions and Azure ML jobs.
+- Dockerized FastAPI + web UI deployment on Azure Container Apps.
+- Azure stack: Azure SQL, Azure ML, Blob Storage, ACR, Container Apps.
 
 ## System Architecture
 
 1. **Ingestion Layer**  
-   Twelve Data OHLCV is ingested into Supabase.
+   Twelve Data OHLCV is ingested into Azure SQL Database.
 
-2. **Data Sync Layer**  
-   Optional CSV export from Supabase is available for debugging or local snapshots.
+2. **Training Layer**  
+   Realized volatility is computed from Azure SQL-backed market data and GRU models are retrained.
 
-3. **Training Layer**  
-   Realized volatility is computed from Supabase-backed market data and GRU models are retrained.
+3. **Experiment Layer**  
+   Parameters, metrics, and artifacts are logged in MLflow/Azure ML.
 
-4. **Experiment Layer**  
-   Parameters, metrics, and artifacts are logged in MLflow.
-
-5. **Serving Layer**  
-   FastAPI exposes prediction endpoints and serves the frontend.
+4. **Serving Layer**  
+   FastAPI exposes prediction endpoints and serves the frontend from Azure Container Apps.
 
 ## MLOps Capabilities
 
 - **Versioned Codebase:** Git + GitHub workflows.
-- **Data Lineage:** Supabase as source-of-truth for ingested market data.
+- **Data Lineage:** Azure SQL as source-of-truth for ingested market data.
 - **Reproducible Runs:** environment-driven configs and pinned dependencies.
-- **Automated Retraining:** scheduled and manual workflows in GitHub Actions.
-- **Model Artifact Management:** persisted models in `backend/data/nn_models`.
+- **Automated Retraining:** scheduled and manual Azure ML jobs triggered by GitHub Actions.
+- **Model Artifact Management:** generated model files are uploaded to Azure Blob Storage and are not committed to Git.
 - **Experiment Traceability:** MLflow metrics/artifacts per training run.
 - **Operational Health Checks:** API health endpoint and preflight checks.
 
 ## Tech Stack
 
 - **Data Source:** Twelve Data API  
-- **Database:** Supabase (Postgres)  
+- **Database:** Azure SQL Database  
 - **ML Framework:** PyTorch (GRU)  
 - **Experiment Tracking:** MLflow  
-- **Orchestration/CI:** GitHub Actions  
+- **Orchestration/CI:** GitHub Actions + Azure ML Jobs  
 - **API:** FastAPI  
 - **Visualization/UI:** HTML/CSS/JavaScript + Plotly  
 - **Containerization:** Docker + Docker Compose
@@ -59,17 +56,17 @@ backend/
   nn_trainer.py           # Neural training pipeline (GRU)
 scripts/
   ingest_market_data.py
-  sync_market_data_from_supabase.py
   retrain_with_mlflow.py
   run_daily_pipeline.py
 src/
-  supabase_connect.py
+  azure_sql_connect.py
   twelve_data_client.py
 .github/workflows/
-  daily-mlops-pipeline.yml
-  manual-full-backfill.yml
-SQL/
-  supabase_schema.sql
+  azure-mlops-pipeline.yml
+  azure-container-app-deploy.yml
+azure/
+  ml/
+  sql/
 frontend/
   index.html, asset.html, portfolio.html, result_*.html, app.js, style.css
 ```
@@ -78,7 +75,7 @@ frontend/
 
 ```bash
 cp .env.example .env
-# fill TWELVE_DATA_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY
+# fill TWELVE_DATA_API_KEY and AZURE_SQL_* values
 
 python -m venv .venv
 source .venv/bin/activate
@@ -90,20 +87,13 @@ Run the full local pipeline:
 ```bash
 make preflight
 make ingest-daily
-make sync
 make retrain
 ```
 
-Training defaults to reading market data directly from Supabase:
+Training defaults to reading market data directly from Azure SQL:
 
-- `MARKET_DATA_SOURCE=supabase`
-- `SYNC_MARKET_CSV=false`
-
-If you want local CSV snapshots as well, set:
-
-```bash
-SYNC_MARKET_CSV=true
-```
+- `MARKET_DATA_SOURCE=azure_sql`
+- `AZURE_SQL_TABLE=dbo.daily_stock_prices`
 
 ## Run the Platform
 
@@ -126,24 +116,11 @@ docker compose up --build
 - App/UI/API: `http://localhost:8000`
 - MLflow UI: `http://localhost:5001`
 
-### Auto-Published App Image
+### Azure Deployment
 
-The daily GitHub Actions pipeline now builds and publishes an app image to GitHub Container Registry after retraining completes successfully. The image includes the refreshed `backend/data` artifacts produced during that run.
+The Azure deployment workflow builds the Docker image, pushes it to Azure Container Registry, and serves it through Azure Container Apps. The Azure ML pipeline writes the latest trained model artifacts to Azure Blob Storage, then refreshes the Container App revision so the API/UI can load the newest artifacts at startup.
 
-- Image: `ghcr.io/<owner>/<repo>-app:latest`
-- Immutable tag: `ghcr.io/<owner>/<repo>-app:<git-sha>`
-
-To run the published image on a Docker host:
-
-```bash
-docker compose -f docker-compose.deploy.yml up -d
-```
-
-Set `APP_IMAGE` if you want to pin a specific tag:
-
-```bash
-APP_IMAGE=ghcr.io/<owner>/<repo>-app:<git-sha> docker compose -f docker-compose.deploy.yml up -d
-```
+Use `Azure Container App Deploy` once to publish the UI/API. Use `Azure MLOps Pipeline` manually or on schedule for ingestion, retraining, MLflow tracking, artifact upload, and serving refresh.
 
 ## Security and Secrets
 
@@ -151,12 +128,8 @@ APP_IMAGE=ghcr.io/<owner>/<repo>-app:<git-sha> docker compose -f docker-compose.
 - `.env.example` is template-only (no real credentials).
 - Use GitHub Secrets for CI/CD environment values.
 
-## Supabase Setup
+## Azure Setup
 
-Execute the schema in:
+The `devel-Azure` branch includes a low-cost all-Azure MLOps path using Azure SQL, Azure ML jobs, Azure Blob Storage, Azure Container Registry, and Azure Container Apps.
 
-```text
-SQL/supabase_schema.sql
-```
-
-inside the Supabase SQL Editor.
+See [docs/azure_mlops_setup.md](/Users/tayebi/Documents/Repositories/GitHub/volatility-mlops/docs/azure_mlops_setup.md).

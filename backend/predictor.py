@@ -18,6 +18,7 @@ from datetime import timedelta
 
 from backend.nn_trainer import VolatilityModel, TrainingConfig
 from backend.dataset import DatasetProcessor, DataConfig
+from backend.azure_artifacts import download_artifacts_if_configured
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +40,8 @@ class VolatilityPredictor:
         self.volatility_dir = os.path.join(backend_dir, "data", "saved_volatilities")
         self.models = {}  # Cache for loaded models
         self.volatility_data = {}  # Cache for volatility data
+
+        download_artifacts_if_configured(target_root=os.path.join(backend_dir, "data"))
         
         # Align serving-time architecture with training-time env configuration.
         self.config = TrainingConfig(

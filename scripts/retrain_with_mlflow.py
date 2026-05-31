@@ -55,8 +55,8 @@ def compute_and_save_volatility(asset: str, config: "TrainingConfig") -> pd.Seri
     market_data = data_processor.load_market_data(
         asset=asset,
         data_folder=config.data_folder,
-        source=os.getenv("MARKET_DATA_SOURCE", "supabase"),
-        table_name=os.getenv("SUPABASE_TABLE", "daily_stock_prices"),
+        source=os.getenv("MARKET_DATA_SOURCE", "azure_sql"),
+        table_name=os.getenv("AZURE_SQL_TABLE", "dbo.daily_stock_prices"),
     )
     volatility = data_processor.compute_realized_volatility(prices=market_data["Close"], window=config.rolling_window)
     data_processor.save_volatility(volatility=volatility, asset=asset, save_folder=config.volatility_save_folder)
@@ -109,14 +109,15 @@ def run(symbols: List[str]) -> None:
     load_dotenv()
     from backend.nn_trainer import NNTrainer
 
-    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
     experiment = os.getenv("MLFLOW_EXPERIMENT_NAME", "volatility-nn")
-    mlflow.set_tracking_uri(tracking_uri)
+    if tracking_uri:
+        mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(experiment)
 
     with mlflow.start_run(run_name="scheduled-retraining"):
-        mlflow.set_tag("pipeline", "supabase-gha-mlflow")
-        mlflow.set_tag("market_data_source", os.getenv("MARKET_DATA_SOURCE", "supabase"))
+        mlflow.set_tag("pipeline", "azure-ml-azure-sql-mlflow")
+        mlflow.set_tag("market_data_source", os.getenv("MARKET_DATA_SOURCE", "azure_sql"))
 
         for symbol in symbols:
             config = create_training_config(symbol)

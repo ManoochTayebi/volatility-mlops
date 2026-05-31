@@ -9,13 +9,15 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from src.supabase_connect import SupabaseOperations
+from src.azure_sql_connect import AzureSqlOperations
 
 
 REQUIRED_ENV_VARS = [
     "TWELVE_DATA_API_KEY",
-    "SUPABASE_URL",
-    "SUPABASE_SERVICE_KEY",
+    "AZURE_SQL_SERVER",
+    "AZURE_SQL_DATABASE",
+    "AZURE_SQL_USERNAME",
+    "AZURE_SQL_PASSWORD",
 ]
 
 
@@ -24,9 +26,9 @@ def parse_symbols(raw_symbols: str) -> List[str]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Validate environment and Supabase connectivity")
+    parser = argparse.ArgumentParser(description="Validate environment and Azure SQL connectivity")
     parser.add_argument("--symbols", default=os.getenv("SYMBOLS", "AAPL,GOOGL,MSFT"))
-    parser.add_argument("--table", default=os.getenv("SUPABASE_TABLE", "daily_stock_prices"))
+    parser.add_argument("--table", default=os.getenv("AZURE_SQL_TABLE", "dbo.daily_stock_prices"))
     args = parser.parse_args()
 
     load_dotenv()
@@ -42,11 +44,12 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        supabase = SupabaseOperations()
+        azure_sql = AzureSqlOperations()
+        azure_sql.ensure_market_table(table_name=args.table)
         for symbol in symbols:
-            _ = supabase.get_latest_datetime(table_name=args.table, symbol=symbol)
+            _ = azure_sql.get_latest_datetime(table_name=args.table, symbol=symbol)
     except Exception as exc:
-        print(f"Supabase preflight failed: {exc}", file=sys.stderr)
+        print(f"Azure SQL preflight failed: {exc}", file=sys.stderr)
         sys.exit(1)
 
     print("Preflight checks passed")

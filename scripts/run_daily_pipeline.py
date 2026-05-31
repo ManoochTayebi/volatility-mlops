@@ -12,9 +12,10 @@ def run_step(cmd: List[str]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run end-to-end daily MLOps pipeline")
     parser.add_argument("--symbols", default=os.getenv("SYMBOLS", "AAPL,GOOGL,MSFT"))
-    parser.add_argument("--table", default=os.getenv("SUPABASE_TABLE", "daily_stock_prices"))
+    parser.add_argument("--table", default=os.getenv("AZURE_SQL_TABLE", "dbo.daily_stock_prices"))
     args = parser.parse_args()
-    sync_market_csv = os.getenv("SYNC_MARKET_CSV", "false").lower() == "true"
+    os.environ["SYMBOLS"] = args.symbols
+    os.environ["AZURE_SQL_TABLE"] = args.table
 
     run_step([
         "python",
@@ -36,24 +37,18 @@ def main() -> None:
         args.table,
     ])
 
-    if sync_market_csv:
-        run_step([
-            "python",
-            "scripts/sync_market_data_from_supabase.py",
-            "--symbols",
-            args.symbols,
-            "--table",
-            args.table,
-        ])
-    else:
-        print("Skipping market CSV sync because SYNC_MARKET_CSV is false")
-
     run_step([
         "python",
         "scripts/retrain_with_mlflow.py",
         "--symbols",
         args.symbols,
     ])
+
+    if os.getenv("AZURE_UPLOAD_ARTIFACTS", "false").lower() == "true":
+        run_step([
+            "python",
+            "scripts/upload_artifacts_to_azure_blob.py",
+        ])
 
 
 if __name__ == "__main__":

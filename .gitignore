@@ -16,6 +16,11 @@ venv/
 # MLflow local store
 mlruns/
 
+# Generated model/data artifacts
+backend/data/**/*.pth
+backend/data/**/*.npy
+!backend/data/**/.gitkeep
+
 # OS/editor
 .DS_Store
 .vscode/
