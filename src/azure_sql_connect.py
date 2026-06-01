@@ -1,5 +1,6 @@
 import os
 import re
+from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
@@ -20,19 +21,51 @@ class AzureSqlOperations:
                 "and AZURE_SQL_PASSWORD must be set"
             )
 
+    @staticmethod
+    def _normalize_server(server: str) -> str:
+        cleaned = server.strip()
+        if "://" in cleaned:
+            cleaned = urlparse(cleaned).netloc or cleaned
+        cleaned = cleaned.replace("tcp:", "").split(",")[0].split(":")[0].strip().strip("/")
+        if "." not in cleaned:
+            cleaned = f"{cleaned}.database.windows.net"
+        return cleaned
+
+    @staticmethod
+    def _normalize_username(username: str, server: str) -> str:
+        cleaned = username.strip()
+        server_short_name = server.split(".")[0]
+        full_suffix = f"@{server}"
+        if cleaned.endswith(full_suffix):
+            cleaned = f"{cleaned[: -len(full_suffix)]}@{server_short_name}"
+        if "@" not in cleaned:
+            cleaned = f"{cleaned}@{server_short_name}"
+        return cleaned
+
+    def safe_connection_summary(self) -> Dict[str, Any]:
+        server = self._normalize_server(self.server)
+        username = self._normalize_username(self.username, server)
+        return {
+            "server_suffix_ok": server.endswith(".database.windows.net"),
+            "server_short_name": server.split(".")[0],
+            "database": self.database,
+            "username_format_ok": "@" in username and not username.endswith(".database.windows.net"),
+        }
+
     def _connect(self):
         import pymssql
 
-        server = self.server.replace("tcp:", "").split(",")[0]
-        server_short_name = server.split(".")[0]
-        username = self.username if "@" in self.username else f"{self.username}@{server_short_name}"
+        server = self._normalize_server(self.server)
+        username = self._normalize_username(self.username, server)
         return pymssql.connect(
             server=server,
+            port=1433,
             user=username,
             password=self.password,
             database=self.database,
             login_timeout=30,
             timeout=60,
+            tds_version="7.4",
         )
 
     @staticmethod

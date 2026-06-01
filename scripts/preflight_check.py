@@ -45,6 +45,7 @@ def main() -> None:
 
     try:
         azure_sql = AzureSqlOperations()
+        print(f"Azure SQL connection summary: {azure_sql.safe_connection_summary()}")
         azure_sql.ensure_market_table(table_name=args.table)
         for symbol in symbols:
             _ = azure_sql.get_latest_datetime(table_name=args.table, symbol=symbol)
