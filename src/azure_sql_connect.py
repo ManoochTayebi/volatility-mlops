@@ -1,5 +1,6 @@
 import os
 import re
+import socket
 from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional
 
@@ -11,10 +12,10 @@ class AzureSqlOperations:
 
     def __init__(self) -> None:
         load_dotenv()
-        self.server = os.getenv("AZURE_SQL_SERVER")
-        self.database = os.getenv("AZURE_SQL_DATABASE")
-        self.username = os.getenv("AZURE_SQL_USERNAME")
-        self.password = os.getenv("AZURE_SQL_PASSWORD")
+        self.server = (os.getenv("AZURE_SQL_SERVER") or "").strip()
+        self.database = (os.getenv("AZURE_SQL_DATABASE") or "").strip()
+        self.username = (os.getenv("AZURE_SQL_USERNAME") or "").strip()
+        self.password = (os.getenv("AZURE_SQL_PASSWORD") or "").strip()
         if not all([self.server, self.database, self.username, self.password]):
             raise ValueError(
                 "AZURE_SQL_SERVER, AZURE_SQL_DATABASE, AZURE_SQL_USERNAME, "
@@ -51,6 +52,23 @@ class AzureSqlOperations:
             "database": self.database,
             "username_format_ok": "@" in username and not username.endswith(".database.windows.net"),
         }
+
+    def network_probe(self) -> Dict[str, Any]:
+        server = self._normalize_server(self.server)
+        result: Dict[str, Any] = {"server": server, "port": 1433}
+        try:
+            result["resolved_ip"] = socket.gethostbyname(server)
+        except OSError as exc:
+            result["dns_error"] = str(exc)
+            return result
+
+        try:
+            with socket.create_connection((server, 1433), timeout=10):
+                result["tcp_1433_reachable"] = True
+        except OSError as exc:
+            result["tcp_1433_reachable"] = False
+            result["tcp_error"] = str(exc)
+        return result
 
     def _connect(self):
         import pymssql
