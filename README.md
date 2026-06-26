@@ -13,6 +13,27 @@ Production-style MLOps pipeline for market volatility forecasting with a neural 
 - Deployment smoke test against the live API health endpoint.
 - Azure stack: Azure SQL, Azure ML, Blob Storage, ACR, Container Apps.
 
+## Current Pipeline Status
+
+Latest verified status on `main`:
+
+```text
+CI                         passing
+Azure Container App Deploy passing
+Azure MLOps Pipeline       blocked by Azure SQL login credentials
+```
+
+The Azure ML workflow logs in to Azure successfully, creates/uses the Azure ML compute target successfully, then fails during the SQL preflight step with an Azure SQL login error. Fix the GitHub repository secrets for Azure SQL, then rerun `Azure MLOps Pipeline`.
+
+Most likely secrets to verify:
+
+```text
+AZURE_SQL_SERVER
+AZURE_SQL_DATABASE
+AZURE_SQL_USERNAME
+AZURE_SQL_PASSWORD
+```
+
 ## System Architecture
 
 1. **Ingestion Layer**  
@@ -150,7 +171,28 @@ After deployment, the workflow calls:
 python scripts/smoke_test_api.py --base-url "$APP_BASE_URL"
 ```
 
-The smoke test validates `/api/health` on the live app.
+The smoke test validates `/api/health` on the live app. The script retries during startup so new Azure Container App revisions have time to become reachable.
+
+## Azure Resource Cleanup
+
+Azure Container Apps may create a Log Analytics workspace for monitoring. During repeated deployment experiments, duplicate workspaces with names like this can appear:
+
+```text
+workspace-rgvolatilitymlopsdevRT4
+workspace-rgvolatilitymlopsdevIDPZ
+workspace-rgvolatilitymlopsdevinqb
+```
+
+You only need the Log Analytics workspace that is connected to the active Container Apps environment.
+
+Before deleting any duplicate workspace:
+
+1. Open the Container Apps environment, for example `cae-volatility-mlops-dev`.
+2. Check which Log Analytics workspace is attached to it.
+3. Keep the attached workspace.
+4. Delete only the unused duplicate `workspace-rgvolatility...` resources.
+
+For a cleaner long-term setup, create one fixed Log Analytics workspace, such as `law-volatility-mlops-dev`, and configure the Container Apps environment to use that workspace instead of relying on Azure-generated names.
 
 ## Quality Gate
 
@@ -169,6 +211,36 @@ If a trained model has RMSE above `MODEL_MAX_RMSE`, registration is blocked. If 
 - `.env` and `.env.*` are ignored by Git.
 - `.env.example` is template-only (no real credentials).
 - Use GitHub Secrets for CI/CD environment values.
+
+Required GitHub secrets for the Azure workflows:
+
+```text
+AZURE_CREDENTIALS
+TWELVE_DATA_API_KEY
+AZURE_SQL_SERVER
+AZURE_SQL_DATABASE
+AZURE_SQL_USERNAME
+AZURE_SQL_PASSWORD
+AZURE_STORAGE_CONNECTION_STRING
+```
+
+Common GitHub repository variables:
+
+```text
+AZURE_RESOURCE_GROUP
+AZURE_LOCATION
+AZURE_ML_WORKSPACE
+AZURE_COMPUTE_NAME
+AZURE_COMPUTE_SIZE
+AZURE_COMPUTE_TIER
+AZURE_ACR_NAME
+AZURE_CONTAINER_APP
+AZURE_CONTAINER_APP_ENV
+AZURE_SQL_TABLE
+AZURE_MODEL_ARTIFACTS_CONTAINER
+AZURE_MODEL_ARTIFACTS_PREFIX
+SYMBOLS
+```
 
 ## Azure Setup
 
