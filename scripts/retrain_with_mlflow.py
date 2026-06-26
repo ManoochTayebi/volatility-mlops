@@ -74,10 +74,22 @@ def log_asset_run(asset: str, config: "TrainingConfig", details: Dict, volatilit
     if os.path.exists(volatility_path):
         mlflow.log_artifact(volatility_path, artifact_path=f"volatility/{asset.lower()}")
 
+
 def maybe_register_model(asset: str, config: "TrainingConfig", details: Dict) -> None:
     register = os.getenv("MLFLOW_REGISTER_MODELS", "false").lower() == "true"
     if not register:
         return
+
+    max_rmse = os.getenv("MODEL_MAX_RMSE")
+    if max_rmse is not None and max_rmse != "":
+        rmse = float(details["metrics"]["rmse"])
+        threshold = float(max_rmse)
+        if rmse > threshold:
+            message = f"[{asset}] model registration blocked: rmse {rmse:.6f} > threshold {threshold:.6f}"
+            if os.getenv("ENFORCE_MODEL_QUALITY_GATE", "false").lower() == "true":
+                raise ValueError(message)
+            print(message)
+            return
 
     import torch
     from backend.nn_trainer import VolatilityModel
@@ -102,7 +114,6 @@ def maybe_register_model(asset: str, config: "TrainingConfig", details: Dict) ->
         print(f"[{asset}] registered model version {result.version} as {model_name}")
     except Exception as exc:
         print(f"[{asset}] model registration skipped: {exc}")
-
 
 
 def run(symbols: List[str]) -> None:
