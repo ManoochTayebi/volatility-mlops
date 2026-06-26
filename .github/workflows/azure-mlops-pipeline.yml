@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - devel-Azure
+      - main
   schedule:
     # Weekdays after US market close buffer.
     - cron: "30 2 * * 2-6"
