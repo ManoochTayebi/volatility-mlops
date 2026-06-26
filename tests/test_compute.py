@@ -15,7 +15,7 @@ class FakePredictor:
 
 
 def test_compute_asset_volatility_success(monkeypatch):
-    monkeypatch.setattr(compute, "predictor", FakePredictor())
+    monkeypatch.setattr(compute, "get_predictor", lambda: FakePredictor())
 
     result = compute.compute_asset_volatility("AAPL", days=2, historical_period=2)
 
@@ -26,7 +26,7 @@ def test_compute_asset_volatility_success(monkeypatch):
 
 
 def test_compute_portfolio_volatility_success(monkeypatch):
-    monkeypatch.setattr(compute, "predictor", FakePredictor())
+    monkeypatch.setattr(compute, "get_predictor", lambda: FakePredictor())
 
     result = compute.compute_portfolio_volatility(["AAPL", "MSFT"], days=2, historical_period=2)
 
