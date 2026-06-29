@@ -1,31 +1,25 @@
 # Volatility MLOps Platform
 
-Production-style MLOps pipeline for market volatility forecasting with a neural time-series model, automated retraining, experiment tracking, and containerized API/UI delivery.
+Production-style MLOps platform for market volatility forecasting. The project ingests market data, stores it in Azure SQL, trains neural volatility models with Azure ML, tracks experiments with MLflow, publishes model artifacts to Azure Blob Storage, and serves predictions through a containerized FastAPI + web UI application on Azure Container Apps.
 
-## Project Highlights
+## Platform Dashboard
 
-- End-to-end pipeline from market data ingestion to model-serving.
-- Neural forecasting backend (GRU) optimized for fast retraining/inference.
-- Experiment tracking and optional model registration via MLflow.
-- Scheduled orchestration with GitHub Actions and Azure ML jobs.
-- Dockerized FastAPI + web UI deployment on Azure Container Apps.
-- CI checks with Pytest and Docker image build.
-- Deployment smoke test against the live API health endpoint.
-- Azure stack: Azure SQL, Azure ML, Blob Storage, ACR, Container Apps.
+| Area | Status | Notes |
+| --- | --- | --- |
+| CI | Passing | Runs Pytest and builds the Docker image on `main`. |
+| API/UI deployment | Passing | Builds and deploys the FastAPI + frontend container to Azure Container Apps. |
+| Deployment smoke test | Passing | Validates the live `/api/health` endpoint after deployment. |
+| Azure ML retraining | Blocked | Azure ML job starts correctly, but Azure SQL rejects the configured SQL login. |
+| Model registry gate | Available | Optional RMSE threshold before MLflow model registration. |
+| Artifact serving | Available | Latest model artifacts are expected in Azure Blob Storage. |
 
-## Current Pipeline Status
-
-Latest verified status on `main`:
+Current cloud blocker:
 
 ```text
-CI                         passing
-Azure Container App Deploy passing
-Azure MLOps Pipeline       blocked by Azure SQL login credentials
+Azure MLOps Pipeline -> Azure SQL preflight -> Login failed for user
 ```
 
-The Azure ML workflow logs in to Azure successfully, creates/uses the Azure ML compute target successfully, then fails during the SQL preflight step with an Azure SQL login error. Fix the GitHub repository secrets for Azure SQL, then rerun `Azure MLOps Pipeline`.
-
-Most likely secrets to verify:
+Verify the GitHub secrets used by the Azure ML workflow:
 
 ```text
 AZURE_SQL_SERVER
@@ -34,185 +28,209 @@ AZURE_SQL_USERNAME
 AZURE_SQL_PASSWORD
 ```
 
-## System Architecture
+## Architecture
 
-1. **Ingestion Layer**  
-   Twelve Data OHLCV is ingested into Azure SQL Database.
-
-2. **Training Layer**  
-   Realized volatility is computed from Azure SQL-backed market data and GRU models are retrained.
-
-3. **Experiment Layer**  
-   Parameters, metrics, and artifacts are logged in MLflow/Azure ML.
-
-4. **Serving Layer**  
-   FastAPI exposes prediction endpoints and serves the frontend from Azure Container Apps.
+```text
+Twelve Data API
+   -> ingestion scripts
+   -> Azure SQL Database
+   -> Azure ML training job
+   -> MLflow tracking + optional model registration
+   -> Azure Blob Storage model artifacts
+   -> Azure Container Apps
+   -> FastAPI + frontend
+```
 
 ## MLOps Capabilities
 
-- **Versioned Codebase:** Git + GitHub workflows.
-- **Data Lineage:** Azure SQL as source-of-truth for ingested market data.
-- **Reproducible Runs:** environment-driven configs and pinned dependencies.
-- **Automated Retraining:** scheduled and manual Azure ML jobs triggered by GitHub Actions.
-- **Model Artifact Management:** generated model files are uploaded to Azure Blob Storage and are not committed to Git.
-- **Experiment Traceability:** MLflow metrics/artifacts per training run.
-- **Quality Gate:** optional RMSE threshold before MLflow model registration.
-- **Operational Health Checks:** API health endpoint, preflight checks, and deployment smoke tests.
-
-## Tech Stack
-
-- **Data Source:** Twelve Data API  
-- **Database:** Azure SQL Database  
-- **ML Framework:** PyTorch (GRU)  
-- **Experiment Tracking:** MLflow  
-- **Orchestration/CI:** GitHub Actions + Azure ML Jobs  
-- **API:** FastAPI  
-- **Visualization/UI:** HTML/CSS/JavaScript + Plotly  
-- **Containerization:** Docker + Docker Compose
+| Capability | Implementation |
+| --- | --- |
+| Source control | GitHub `main` branch with CI/CD workflows |
+| Data source | Twelve Data OHLCV market data |
+| Data store | Azure SQL Database |
+| Training | PyTorch GRU volatility forecasting model |
+| Experiment tracking | MLflow metrics, parameters, and artifacts |
+| Orchestration | GitHub Actions and Azure ML jobs |
+| Model artifacts | Azure Blob Storage |
+| Serving | FastAPI API and static frontend |
+| Deployment | Docker image pushed to ACR and deployed to Azure Container Apps |
+| Validation | Pytest, preflight checks, live smoke test |
+| Quality gate | Optional RMSE threshold before model registration |
 
 ## Repository Structure
 
 ```text
 backend/
-  app.py                  # FastAPI app + static frontend mounting
+  app.py                  # FastAPI app and static frontend mounting
   compute.py              # API business logic
   predictor.py            # Inference engine
-  nn_trainer.py           # Neural training pipeline (GRU)
+  nn_trainer.py           # GRU training pipeline
+
+frontend/
+  index.html
+  asset.html
+  portfolio.html
+  result_*.html
+  app.js
+  style.css
+
 scripts/
   ingest_market_data.py
+  preflight_check.py
   retrain_with_mlflow.py
   run_daily_pipeline.py
   smoke_test_api.py
+
 src/
   azure_sql_connect.py
   twelve_data_client.py
+
+azure/
+  ml/
+  sql/
+
 .github/workflows/
   ci.yml
   azure-mlops-pipeline.yml
   azure-container-app-deploy.yml
-azure/
-  ml/
-  sql/
-frontend/
-  index.html, asset.html, portfolio.html, result_*.html, app.js, style.css
+
 tests/
 ```
 
-## Quick Start
+## Local Development
+
+Create the environment:
 
 ```bash
-cp .env.example .env
-# fill TWELVE_DATA_API_KEY and AZURE_SQL_* values
-
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run the full local pipeline:
+Create a local `.env` from the template:
 
 ```bash
-make preflight
-make ingest-daily
-make retrain
+cp .env.example .env
 ```
 
-Training defaults to reading market data directly from Azure SQL:
-
-- `MARKET_DATA_SOURCE=azure_sql`
-- `AZURE_SQL_TABLE=dbo.daily_stock_prices`
-
-## Tests and CI
-
-Run tests locally:
+Run tests:
 
 ```bash
 python -m pytest -q
 ```
 
-The `CI` workflow runs on push and pull requests:
-
-```text
-install dependencies
--> run pytest
--> build Docker image
-```
-
-## Run the Platform
-
-### Local
+Run the API and frontend locally:
 
 ```bash
 uvicorn backend.app:app --host 0.0.0.0 --port 8000
 ```
 
-- UI: `http://localhost:8000`
-- API root: `http://localhost:8000/api`
-- Health: `http://localhost:8000/api/health`
+Local endpoints:
 
-### Docker
+```text
+UI          http://localhost:8000
+API root    http://localhost:8000/api
+Health      http://localhost:8000/api/health
+```
+
+Run with Docker:
 
 ```bash
 docker compose up --build
 ```
 
-- App/UI/API: `http://localhost:8000`
-- MLflow UI: `http://localhost:5001`
+Docker endpoints:
 
-### Azure Deployment
+```text
+App/UI/API  http://localhost:8000
+MLflow UI   http://localhost:5001
+```
 
-The Azure deployment workflow builds the Docker image, pushes it to Azure Container Registry, and serves it through Azure Container Apps. The Azure ML pipeline writes the latest trained model artifacts to Azure Blob Storage, then refreshes the Container App revision so the API/UI can load the newest artifacts at startup.
+## Pipeline Workflows
 
-Use `Azure Container App Deploy` once to publish the UI/API. Use `Azure MLOps Pipeline` manually or on schedule for ingestion, retraining, MLflow tracking, artifact upload, and serving refresh.
+### CI
 
-After deployment, the workflow calls:
+Workflow:
+
+```text
+.github/workflows/ci.yml
+```
+
+Runs on:
+
+```text
+push to main
+pull request
+manual dispatch
+```
+
+Steps:
+
+```text
+checkout
+install dependencies
+run pytest
+build Docker image
+```
+
+### Azure Container App Deploy
+
+Workflow:
+
+```text
+.github/workflows/azure-container-app-deploy.yml
+```
+
+Responsibilities:
+
+```text
+login to Azure
+build Docker image
+push image to Azure Container Registry
+deploy/update Azure Container App
+attach runtime secrets
+run live API smoke test
+```
+
+The smoke test calls:
 
 ```bash
 python scripts/smoke_test_api.py --base-url "$APP_BASE_URL"
 ```
 
-The smoke test validates `/api/health` on the live app. The script retries during startup so new Azure Container App revisions have time to become reachable.
-
-## Azure Resource Cleanup
-
-Azure Container Apps may create a Log Analytics workspace for monitoring. During repeated deployment experiments, duplicate workspaces with names like this can appear:
+It validates:
 
 ```text
-workspace-rgvolatilitymlopsdevRT4
-workspace-rgvolatilitymlopsdevIDPZ
-workspace-rgvolatilitymlopsdevinqb
+GET /api/health -> {"status": "ok", ...}
 ```
 
-You only need the Log Analytics workspace that is connected to the active Container Apps environment.
+### Azure MLOps Pipeline
 
-Before deleting any duplicate workspace:
-
-1. Open the Container Apps environment, for example `cae-volatility-mlops-dev`.
-2. Check which Log Analytics workspace is attached to it.
-3. Keep the attached workspace.
-4. Delete only the unused duplicate `workspace-rgvolatility...` resources.
-
-For a cleaner long-term setup, create one fixed Log Analytics workspace, such as `law-volatility-mlops-dev`, and configure the Container Apps environment to use that workspace instead of relying on Azure-generated names.
-
-## Quality Gate
-
-Model registration can be protected with an RMSE threshold:
+Workflow:
 
 ```text
-MLFLOW_REGISTER_MODELS=true
-MODEL_MAX_RMSE=0.05
-ENFORCE_MODEL_QUALITY_GATE=true
+.github/workflows/azure-mlops-pipeline.yml
 ```
 
-If a trained model has RMSE above `MODEL_MAX_RMSE`, registration is blocked. If `ENFORCE_MODEL_QUALITY_GATE=true`, the retraining job fails instead of only skipping registration.
+Responsibilities:
 
-## Security and Secrets
+```text
+login to Azure
+ensure Azure ML compute exists
+submit Azure ML job
+run data preflight
+ingest market data
+train volatility models
+log metrics and artifacts
+upload latest model artifacts to Blob Storage
+refresh the serving app revision
+```
 
-- `.env` and `.env.*` are ignored by Git.
-- `.env.example` is template-only (no real credentials).
-- Use GitHub Secrets for CI/CD environment values.
+This workflow is currently blocked by Azure SQL authentication. Azure login and Azure ML compute creation are working.
 
-Required GitHub secrets for the Azure workflows:
+## Configuration
+
+Required GitHub secrets:
 
 ```text
 AZURE_CREDENTIALS
@@ -242,8 +260,78 @@ AZURE_MODEL_ARTIFACTS_PREFIX
 SYMBOLS
 ```
 
+Recommended development defaults:
+
+```text
+AZURE_COMPUTE_SIZE=Standard_DS2_v2
+AZURE_COMPUTE_TIER=dedicated
+AZURE_MODEL_ARTIFACTS_CONTAINER=volatility-model-artifacts
+AZURE_MODEL_ARTIFACTS_PREFIX=latest
+AZURE_SQL_TABLE=dbo.daily_stock_prices
+SYMBOLS=AAPL,GOOGL,MSFT
+```
+
+## Model Quality Gate
+
+Model registration can be protected with an RMSE threshold:
+
+```text
+MLFLOW_REGISTER_MODELS=true
+MODEL_MAX_RMSE=0.05
+ENFORCE_MODEL_QUALITY_GATE=true
+```
+
+Behavior:
+
+```text
+RMSE <= MODEL_MAX_RMSE -> model registration allowed
+RMSE > MODEL_MAX_RMSE  -> model registration blocked
+ENFORCE_MODEL_QUALITY_GATE=true -> training job fails when the gate is not met
+```
+
+## Operational Notes
+
+Cost-aware defaults are used where possible:
+
+```text
+Azure ML compute: min instances 0, max instances 1
+Container App: min replicas 0, max replicas 1
+Small development VM size: Standard_DS2_v2
+```
+
+Infrastructure resources should be managed intentionally:
+
+```text
+Use one resource group for the dev environment.
+Use one Container Apps environment for the serving app.
+Use one Log Analytics workspace for Container Apps monitoring.
+Keep generated model artifacts in Blob Storage, not Git.
+Keep credentials in GitHub Secrets or local .env files only.
+```
+
+## Security
+
+- `.env` and `.env.*` are ignored by Git.
+- `.env.example` is a template and must not contain real credentials.
+- GitHub Secrets are used for CI/CD credentials.
+- Azure SQL credentials are validated by the preflight step before ingestion/training.
+- Model and data artifacts are externalized to Azure services.
+
 ## Azure Setup
 
-The `main` branch includes a low-cost all-Azure MLOps path using Azure SQL, Azure ML jobs, Azure Blob Storage, Azure Container Registry, and Azure Container Apps.
+The `main` branch contains a low-cost Azure path using:
 
-See `docs/azure_mlops_setup.md`.
+```text
+Azure SQL Database
+Azure Machine Learning
+Azure Blob Storage
+Azure Container Registry
+Azure Container Apps
+Log Analytics
+```
+
+Detailed Azure setup notes are available in:
+
+```text
+docs/azure_mlops_setup.md
+```
